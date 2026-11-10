@@ -1,0 +1,9 @@
+<Project>
+  <PropertyGroup>
+    <SpaceEngineersBin64 Condition="'$(SpaceEngineersBin64)' == ''">$(registry:HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\Steam App 244850@InstallLocation)\Bin64</SpaceEngineersBin64>
+    <PulsarRoot Condition="'$(PulsarRoot)' == ''">$(APPDATA)\Pulsar</PulsarRoot>
+    <PulsarLibraryFlavor Condition="'$(PulsarLibraryFlavor)' == ''">Legacy</PulsarLibraryFlavor>
+    <PulsarLibraries Condition="'$(PulsarLibraries)' == ''">$(PulsarRoot)\Libraries\$(PulsarLibraryFlavor)</PulsarLibraries>
+    <LangVersion>7.3</LangVersion>
+  </PropertyGroup>
+</Project>
