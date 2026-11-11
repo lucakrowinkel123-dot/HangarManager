@@ -24,9 +24,23 @@ namespace HangarManager
             deployAction = CreateAction(DeployActionId, "Deploy First", DeployFirst, IsHangar, WriteHangarStatus);
             chooseDeployAction = CreateAction(ChooseDeployActionId, "Choose Ship to Deploy", ShowDeployMenu, IsHangar, WriteHangarStatus);
             timerAction = CreateAction(TimerActionId, "Run HangarManager Command", RunTimerCommand, IsTimer, WriteTimerStatus);
-            MyAPIGateway.TerminalControls.CustomActionGetter += AddActions;
+            registeredControls = MyAPIGateway.TerminalControls;
+            registeredControls.CustomActionGetter += AddActions;
             registered = true;
             Log("HangarManager loaded.");
+        }
+
+        private void ResetTerminalActions()
+        {
+            if (registeredControls != null)
+                registeredControls.CustomActionGetter -= AddActions;
+            registeredControls = null;
+            registered = false;
+            storeAction = null;
+            deployAction = null;
+            chooseDeployAction = null;
+            timerAction = null;
+            automaticCommandScanFrames = 0;
         }
 
         private static IMyTerminalAction CreateAction(
@@ -165,7 +179,7 @@ namespace HangarManager
             // player has manually opened the hangar's terminal page.
             try
             {
-                var terminalControlsType = AppDomain.CurrentDomain.GetAssemblies().Select(assembly => assembly.GetType("Hangar.TerminalControls", false)).FirstOrDefault(type => type != null);
+                var terminalControlsType = FindCurrentHangarAssembly()?.GetType("Hangar.TerminalControls", false);
                 var getter = terminalControlsType?.GetMethod("ControlGetter", BindingFlags.Public | BindingFlags.Static);
                 getter?.Invoke(null, new object[] { block, controls });
             }

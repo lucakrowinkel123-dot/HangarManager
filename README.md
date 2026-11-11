@@ -1,8 +1,8 @@
-# HangarManager 0.6.59
+# HangarManager client plugin
 
-Adds toolbar actions and numbered timer commands for the physical Hangar blocks used by the single-miner EMM-A release. It reads the storage zone and confirms store and deploy operations.
+This branch contains the HangarManager source bundled with EMM-A 0.9.40 for Space Engineers 1. It provides toolbar and timer commands for storing and deploying ships and reading the hangar zone. The world needs the Hangar mod for the physical blocks.
 
-This is the exact source bundled with EMM-A 0.8.56. The original local plugin descriptor labels it v0.6.59 and credits EVY. The game world needs the Hangar mod for the physical blocks.
+The [0.6.59 tag](https://github.com/lucakrowinkel123-dot/HangarManager/tree/v0.6.59) preserves the earlier single-miner release. Both bundles use the same local HangarManager version label. The Pulsar submission identifies this revision by its Git commit.
 
 ## Source and build
 

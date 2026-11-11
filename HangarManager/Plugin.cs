@@ -57,6 +57,7 @@ namespace HangarManager
         private IMyTerminalAction chooseDeployAction;
         private IMyTerminalAction timerAction;
         private bool registered;
+        private IMyTerminalControls registeredControls;
         private int automaticCommandScanFrames;
         private object currentSession;
         private static double SimulationTicks;
@@ -70,6 +71,7 @@ namespace HangarManager
             SimulationTicks = EmmaTiming.GameSimulationTime.Ticks;
             if (!ReferenceEquals(currentSession, MyAPIGateway.Session))
             {
+                ResetTerminalActions();
                 PendingTimerCommands.Clear();
                 Inspections.Clear();
                 Inspected.Clear();
@@ -78,11 +80,14 @@ namespace HangarManager
             }
             if (MyAPIGateway.Session == null || MyAPIGateway.TerminalControls == null)
             {
+                ResetTerminalActions();
                 PendingTimerCommands.Clear();
                 Inspections.Clear();
                 Inspected.Clear();
                 return;
             }
+            if (!ReferenceEquals(registeredControls, MyAPIGateway.TerminalControls))
+                ResetTerminalActions();
             UpdateInspections();
             UpdatePendingTimerCommands();
             if (!registered)
@@ -97,8 +102,7 @@ namespace HangarManager
 
         public void Dispose()
         {
-            if (registered && MyAPIGateway.TerminalControls != null)
-                MyAPIGateway.TerminalControls.CustomActionGetter -= AddActions;
+            ResetTerminalActions();
             foreach (var pending in PendingTimerCommands.Values)
                 if (pending?.Hangar != null)
                     RestoreHangarPowerLease(pending.Hangar);
@@ -109,12 +113,6 @@ namespace HangarManager
             InspectionFailed.Clear();
             currentSession = null;
             PendingTimerCommands.Clear();
-            registered = false;
-            storeAction = null;
-            deployAction = null;
-            chooseDeployAction = null;
-            timerAction = null;
-            automaticCommandScanFrames = 0;
         }
 
         private static void ProcessAutomaticTimerCommands()

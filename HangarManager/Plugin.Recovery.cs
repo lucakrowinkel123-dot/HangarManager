@@ -21,7 +21,8 @@ namespace HangarManager
             public object Logic;
             public object PreviousContents;
             public double Started;
-            public bool Requested;
+            public int Requests;
+            public double LastRequest;
             public IMyTimerBlock Timer;
             public int RequestId;
         }
@@ -161,32 +162,9 @@ namespace HangarManager
             {
                 var scan = pair.Value;
                 if (scan.Hangar == null || scan.Hangar.Closed) { done.Add(pair.Key); continue; }
-                if (!scan.Requested)
-                {
-                    object logic;
-                    string error;
-                    if (TryGetHangarLogic(scan.Hangar, out logic, out error))
-                    {
-                        // GetSavedGrids sends a contents request to the server. A response
-                        // replaces Contents; merely seeing a pre-existing list is insufficient.
-                        var method = logic.GetType().Assembly.GetType("Hangar.Session", false)
-                            ?.GetMethod("GetSavedGrids", BindingFlags.Public | BindingFlags.Static);
-                        if (method != null)
-                        {
-                            try
-                            {
-                                scan.Logic = logic;
-                                scan.PreviousContents = GetLogicField<object>(logic, "Contents", null);
-                                method.Invoke(null, new object[] { scan.Hangar });
-                                scan.Requested = true;
-                            }
-                            catch (Exception ex) { Log("Contents refresh failed: " + ex.GetBaseException().Message); }
-                        }
-                    }
-                }
                 var current = scan.Logic == null ? null : GetLogicField<object>(scan.Logic, "Contents", null);
                 int count = scan.Logic == null ? -1 : GetHangarContentsCount(scan.Logic);
-                if (scan.Requested && current != null && !ReferenceEquals(current, scan.PreviousContents) && count >= 0)
+                if (scan.Requests > 0 && current != null && !ReferenceEquals(current, scan.PreviousContents) && count >= 0)
                 {
                     PublishInventory(scan.Hangar, count);
                     bool restored = RestoreHangarPowerLease(scan.Hangar);
@@ -205,10 +183,35 @@ namespace HangarManager
                     RestoreHangarPowerLease(scan.Hangar);
                     InspectionFailed.Add(pair.Key);
                     CompleteContentsRefresh(scan, "Error", "Server contents refresh timed out; occupancy remains unknown.");
-                    done.Add(pair.Key); // Next automatic scan can retry; never infer empty.
+                    done.Add(pair.Key);
                 }
+                else if (scan.Hangar.IsWorking && (scan.Requests == 0
+                    || scan.Timer != null && scan.Requests == 1 && SimulationTicks - scan.LastRequest >= 6 * 60))
+                    RequestHangarContents(scan);
             }
             foreach (var id in done) Inspections.Remove(id);
+        }
+
+        private static void RequestHangarContents(Inspection scan)
+        {
+            // The native server ignores contents requests while the block is not working.
+            // A retry is the same read-only inspection and keeps the original list baseline.
+            object logic;
+            string error;
+            if (!TryGetHangarLogic(scan.Hangar, out logic, out error)) return;
+            if (scan.Requests > 0 && !ReferenceEquals(scan.Logic, logic)) return;
+            var request = logic.GetType().Assembly.GetType("Hangar.Session", false)
+                ?.GetMethod("GetSavedGrids", BindingFlags.Public | BindingFlags.Static);
+            if (request == null) return;
+            if (scan.Requests == 0)
+            {
+                scan.Logic = logic;
+                scan.PreviousContents = GetLogicField<object>(logic, "Contents", null);
+            }
+            scan.Requests++;
+            scan.LastRequest = SimulationTicks;
+            try { request.Invoke(null, new object[] { scan.Hangar }); }
+            catch (Exception ex) { Log("Contents refresh failed: " + ex.GetBaseException().Message); }
         }
         private static void RecoverTimerRequest(IMyTimerBlock timer, MyIni ini)
         {

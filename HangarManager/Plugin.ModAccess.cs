@@ -18,13 +18,21 @@ namespace HangarManager
 {
     public sealed partial class Plugin : IPlugin
     {
+        private static Assembly FindCurrentHangarAssembly()
+        {
+            // Warm reloads leave retired mod assemblies in the process. Only the
+            // current script registry identifies types belonging to this world.
+            var scripts = Sandbox.Game.World.MyScriptManager.Static?.Scripts;
+            return scripts?.Values.Distinct().Where(assembly => assembly.GetType("Hangar.HangarLogic", false) != null).SingleOrDefault();
+        }
+
         private static bool TryGetHangarLogic(IMyTerminalBlock hangar, out object logic, out string error)
         {
             logic = null;
             error = string.Empty;
             try
             {
-                var hangarAssembly = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(assembly => assembly.GetType("Hangar.HangarLogic", false) != null);
+                var hangarAssembly = FindCurrentHangarAssembly();
                 if (hangarAssembly == null)
                     throw new InvalidOperationException("Hangar mod assembly is not loaded");
                 var extensionsType = hangarAssembly.GetType("Hangar.Extensions", false);
